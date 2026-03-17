@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\PlatController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -22,13 +23,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/categories/{category}', [CategoryController::class, 'destroy']);
 
 
-//plat
+    //plat
     Route::get('/plats', [PlatController::class, 'index']);
     Route::post('/plats', [PlatController::class, 'store']);
     Route::get('/plats/{plat}', [PlatController::class, 'show']);
     Route::put('/plats/{plat}', [PlatController::class, 'update']);
     Route::delete('/plats/{plat}', [PlatController::class, 'destroy']);
 
-//plat a category
-    Route::post('/categories/{category}/plats',[PlatController::class,'storeByCategory']);
+    //plat a category
+    Route::post('/categories/{category}/plats', [PlatController::class, 'storeByCategory']);
+
+
+
+    //profile
+    Route::get('/profile', [ProfileController::class, 'getProfile']);
+    Route::put('/profile', [ProfileController::class, 'updateProfile']);
 });
