@@ -20,13 +20,14 @@ class PlatController extends Controller
 
     public function store(Request $request)
     {
-        $this->authorize('create', Plat::class); 
+        $this->authorize('create', Plat::class);
 
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric',
-            'category_id' => 'required|exists:categories,id'
+            'category_id' => 'required|exists:categories,id',
+            'ingredient_ids' => 'array'
         ]);
 
         $plat = Plat::create([
@@ -37,21 +38,30 @@ class PlatController extends Controller
             'user_id' => $request->user()->id
         ]);
 
-        return response()->json($plat, 201);
+        if ($request->has('ingredient_ids')) {
+            $plat->ingredients()->attach($request->ingredient_ids);
+        }
+
+        return response()->json($plat->load('ingredients'), 201);
     }
 
     public function update(Request $request, Plat $plat)
     {
-        $this->authorize('update', $plat); 
+        $this->authorize('update', $plat);
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'price' => 'required|numeric'
+            'price' => 'required|numeric',
+            'ingredient_ids' => 'array'
         ]);
 
         $plat->update(
             $request->only('name', 'description', 'price', 'category_id')
         );
+
+        if ($request->has('ingredient_ids')) {
+            $plat->ingredients()->sync($request->ingredient_ids);
+        }
 
         return response()->json($plat);
     }
@@ -66,7 +76,7 @@ class PlatController extends Controller
         ]);
     }
 
-        public function show(Plat $plat)
+    public function show(Plat $plat)
     {
         $this->authorize('view', $plat);
         return response()->json($plat);
@@ -74,7 +84,7 @@ class PlatController extends Controller
 
     public function storeByCategory(Request $request, Category $category)
     {
-        $this->authorize('create', Plat::class); 
+        $this->authorize('create', Plat::class);
 
         $request->validate([
             'name' => 'required',

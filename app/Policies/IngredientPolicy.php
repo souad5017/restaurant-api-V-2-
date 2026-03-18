@@ -37,7 +37,7 @@ class IngredientPolicy
      */
     public function update(User $user, Ingredient $ingredient): bool
     {
-        return  $user->id === $ingredient->user_id || $user->role === 'admin';
+        return $user->role === 'admin';
     }
 
     /**
@@ -45,7 +45,7 @@ class IngredientPolicy
      */
     public function delete(User $user, Ingredient $ingredient): bool
     {
-        return  $user->id === $ingredient->user_id || $user->role === 'admin';
+        return $user->role === 'admin';
     }
 
     /**
@@ -53,7 +53,7 @@ class IngredientPolicy
      */
     public function restore(User $user, Ingredient $ingredient): bool
     {
-        return $user->id === $ingredient->user_id || $user->role === 'admin';
+        return $user->role === 'admin';
     }
 
     /**
@@ -61,6 +61,6 @@ class IngredientPolicy
      */
     public function forceDelete(User $user, Ingredient $ingredient): bool
     {
-        return  $user->id === $ingredient->user_id || $user->role === 'admin';
+        return $user->role === 'admin';
     }
 }

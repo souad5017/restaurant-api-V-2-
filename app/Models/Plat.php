@@ -26,4 +26,8 @@ class Plat extends Model
     {
         return $this->belongsTo(User::class);
     }
+    public function ingredients()
+    {
+        return $this->belongsToMany(Ingredient::class, 'ingredient_plate');
+    }
 }
