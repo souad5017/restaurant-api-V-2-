@@ -2,8 +2,9 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\IngredientController;
 use App\Http\Controllers\Api\PlatController;
-use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Api\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -38,4 +39,11 @@ Route::middleware('auth:sanctum')->group(function () {
     //profile
     Route::get('/profile', [ProfileController::class, 'getProfile']);
     Route::put('/profile', [ProfileController::class, 'updateProfile']);
+
+
+    //ingredient
+    Route::get('/ingredients', [IngredientController::class, 'index']);
+    Route::post('/ingredients', [IngredientController::class, 'store']);
+    Route::put('/ingredients/{ingredient}', [IngredientController::class, 'update']);
+    Route::delete('/ingredients/{ingredient}', [IngredientController::class, 'destroy']);
 });
