@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\IngredientController;
 use App\Http\Controllers\Api\PlatController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\RecommendationController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -46,4 +47,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/ingredients', [IngredientController::class, 'store']);
     Route::put('/ingredients/{ingredient}', [IngredientController::class, 'update']);
     Route::delete('/ingredients/{ingredient}', [IngredientController::class, 'destroy']);
+
+
+    Route::middleware('auth:sanctum')->post(
+    '/recommendations/analyze/{plate_id}',
+    [RecommendationController::class, 'analyze']
+);
 });
