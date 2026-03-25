@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Plat;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use App\Models\Plat;
+use Illuminate\Support\Facades\Log;
 
 class RecommendationController extends Controller
 {
@@ -14,53 +16,108 @@ class RecommendationController extends Controller
 
         $plate = Plat::with('ingredients')->findOrFail($plate_id);
 
-        $score = 100;
-        $warnings = [];
 
-        $userTags = $user->dietary_tags ?? [];
-
+        $ingredients = [];
         foreach ($plate->ingredients as $ingredient) {
-            foreach ($ingredient->tags ?? [] as $tag) {
+            $ingredients = array_merge($ingredients, $ingredient->tags ?? []);
+        }
 
-                if ($tag == 'contains_sugar' && in_array('no_sugar', $userTags)) {
-                    $score -= 20;
-                    $warnings[] = "Contains sugar";
-                }
+        $restrictions = $user->dietary_tags ?? [];
 
-                if ($tag == 'contains_meat' && in_array('vegan', $userTags)) {
-                    $score -= 30;
-                    $warnings[] = "Contains meat";
-                }
+        // PROMPT
+        $prompt = "
+Analyze the nutritional compatibility between this dish and the user's dietary restrictions.
 
-                if ($tag == 'contains_gluten' && in_array('gluten_free', $userTags)) {
-                    $score -= 20;
-                    $warnings[] = "Contains gluten";
-                }
+DISH: {$plate->name}
+INGREDIENT TAGS: " . implode(', ', $ingredients) . "
+USER RESTRICTIONS: " . implode(', ', $restrictions) . "
 
-                if ($tag == 'contains_lactose' && in_array('no_lactose', $userTags)) {
-                    $score -= 20;
-                    $warnings[] = "Contains lactose";
-                }
+Tag mapping rules:
+- vegan conflicts with: contains_meat, contains_lactose
+- no_sugar conflicts with: contains_sugar
+- no_cholesterol conflicts with: contains_cholesterol
+- gluten_free conflicts with: contains_gluten
+- no_lactose conflicts with: contains_lactose
+
+Calculate score: start at 100, subtract 25 for each conflict found.
+
+Respond ONLY with this JSON (no markdown, no explanation):
+{\"score\": <0-100>, \"warning_message\": \"<in French if score < 50, else empty string>\"}
+";
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . config('services.groq.key'),
+                'Content-Type' => 'application/json',
+            ])->post('https://api.groq.com/openai/v1/chat/completions', [
+               'model' => 'llama-3.1-8b-instant',
+                'messages' => [
+                    [
+                        'role' => 'user',
+                        'content' => $prompt
+                    ]
+                ]
+            ]);
+
+            if ($response->failed()) {
+                Log::error('Groq API Error', [
+                    'status' => $response->status(),
+                    'body' => $response->body()
+                ]);
+
+                return response()->json([
+                    'error' => 'Groq API failed'
+                ], 500);
             }
+
+            $content = $response->json('choices.0.message.content') ?? '';
+
+            // Parse response
+            $result = $this->parseResponse($content);
+
+            return response()->json($result);
+        } catch (\Exception $e) {
+
+            Log::error('OpenAI Error', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'error' => 'AI service unavailable'
+            ], 500);
+        }
+    }
+
+
+    private function parseResponse(string $text): array
+    {
+
+        $text = preg_replace('/```json|```/', '', $text);
+        $text = trim($text);
+
+        preg_match('/\{.*\}/s', $text, $matches);
+        $data = json_decode($matches[0] ?? '{}', true);
+
+        if (!isset($data['score'])) {
+            Log::warning('AI response parsing failed', ['text' => $text]);
+            return [
+                'score'           => 50,
+                'label'           => '🟡 Recommended with notes',
+                'warning_message' => null,
+            ];
         }
 
-        $score = max($score, 0);
+        $score = max(0, min(100, (int) $data['score']));
+        $warning = $data['warning_message'] ?? '';
 
-        // label
-        if ($score >= 80) {
-            $label = "Highly Recommended";
-        } elseif ($score >= 50) {
-            $label = "Recommended with notes";
-        } else {
-            $label = "Not Recommended";
-        }
+        $label = match (true) {
+            $score >= 80 => '✅ Highly Recommended',
+            $score >= 50 => '🟡 Recommended with notes',
+            default      => '⚠️ Not Recommended',
+        };
 
-        $warningMessage = implode(', ', array_unique($warnings));
-
-        return response()->json([
-            'score' => $score,
-            'label' => $label,
-            'warning_message' => $warningMessage
-        ]);
+        return [
+            'score'           => $score,
+            'label'           => $label,
+            'warning_message' => $score < 50 ? $warning : null,
+        ];
     }
 }

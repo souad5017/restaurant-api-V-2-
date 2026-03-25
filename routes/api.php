@@ -48,9 +48,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/ingredients/{ingredient}', [IngredientController::class, 'update']);
     Route::delete('/ingredients/{ingredient}', [IngredientController::class, 'destroy']);
 
-
-    Route::middleware('auth:sanctum')->post(
-    '/recommendations/analyze/{plate_id}',
-    [RecommendationController::class, 'analyze']
-);
+    //recommendations
+    Route::post('/recommendations/analyze/{plate_id}', [RecommendationController::class, 'analyze']);
 });
