@@ -13,6 +13,7 @@ class Plat extends Model
         'name',
         'description',
         'price',
+        'image', 
         'category_id',
         'user_id'
     ];

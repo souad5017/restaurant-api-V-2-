@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Facades\Storage;
 use App\Models\Plat;
 use App\Models\Category;
 use Illuminate\Http\Request;
@@ -27,16 +28,18 @@ class PlatController extends Controller
             'description' => 'nullable|string',
             'price' => 'required|numeric',
             'category_id' => 'required|exists:categories,id',
-            'ingredient_ids' => 'array'
+            'ingredient_ids' => 'array',
+            'image' => 'nullable|image|max:2048',
         ]);
 
-        $plat = Plat::create([
-            'name' => $request->name,
-            'description' => $request->description,
-            'price' => $request->price,
-            'category_id' => $request->category_id,
-            'user_id' => $request->user()->id
-        ]);
+        $data = $request->only('name', 'description', 'price', 'category_id');
+        $data['user_id'] = $request->user()->id;
+
+        if ($request->hasFile('image')) {
+            $data['image'] = $request->file('image')->store('plates', 'public');
+        }
+
+        $plat = Plat::create($data);
 
         if ($request->has('ingredient_ids')) {
             $plat->ingredients()->attach($request->ingredient_ids);
@@ -52,18 +55,27 @@ class PlatController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'price' => 'required|numeric',
-            'ingredient_ids' => 'array'
+            'ingredient_ids' => 'array',
+            'image' => 'nullable|image|max:2048', 
         ]);
 
-        $plat->update(
-            $request->only('name', 'description', 'price', 'category_id')
-        );
+        $data = $request->only('name', 'description', 'price', 'category_id');
+
+        if ($request->hasFile('image')) {
+            if ($plat->image) {
+                Storage::disk('public')->delete($plat->image);
+            }
+
+            $data['image'] = $request->file('image')->store('plates', 'public');
+        }
+
+        $plat->update($data);
 
         if ($request->has('ingredient_ids')) {
             $plat->ingredients()->sync($request->ingredient_ids);
         }
 
-        return response()->json($plat);
+        return response()->json($plat->load('ingredients'));
     }
 
     public function destroy(Plat $plat)
