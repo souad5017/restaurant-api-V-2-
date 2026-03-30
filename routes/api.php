@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AdminStatsController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\IngredientController;
@@ -52,4 +53,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/recommendations/analyze/{plate_id}', [RecommendationController::class, 'analyze']);
     Route::get('/recommendations', [RecommendationController::class, 'index']);
     Route::get('/recommendations/{plate_id}', [RecommendationController::class, 'show']);
+
+
+    // statistic
+    Route::get('/admin/stats', [AdminStatsController::class, 'index']);
 });
