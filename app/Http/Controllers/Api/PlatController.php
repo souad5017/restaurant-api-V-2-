@@ -4,14 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Facades\Storage;
 use App\Models\Plat;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use CloudinaryLabs\CloudinaryLaravel\Facades\Cloudinary;
 
 class PlatController extends Controller
 {
     use AuthorizesRequests;
+
     public function index()
     {
         return response()->json(
@@ -34,9 +35,12 @@ class PlatController extends Controller
 
         $data = $request->only('name', 'description', 'price', 'category_id');
         $data['user_id'] = $request->user()->id;
-
+        
         if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('plates', 'public');
+            $uploadedFileUrl = Cloudinary::upload(
+                $request->file('image')->getRealPath()
+            )->getSecurePath();
+            $data['image'] = $uploadedFileUrl;
         }
 
         $plat = Plat::create($data);
@@ -56,17 +60,16 @@ class PlatController extends Controller
             'name' => 'required|string|max:255',
             'price' => 'required|numeric',
             'ingredient_ids' => 'array',
-            'image' => 'nullable|image|max:2048', 
+            'image' => 'nullable|image|max:2048',
         ]);
 
         $data = $request->only('name', 'description', 'price', 'category_id');
 
         if ($request->hasFile('image')) {
-            if ($plat->image) {
-                Storage::disk('public')->delete($plat->image);
-            }
-
-            $data['image'] = $request->file('image')->store('plates', 'public');
+            $uploadedFileUrl = Cloudinary::upload(
+                $request->file('image')->getRealPath()
+            )->getSecurePath();
+            $data['image'] = $uploadedFileUrl;
         }
 
         $plat->update($data);
